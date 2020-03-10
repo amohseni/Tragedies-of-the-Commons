@@ -30,7 +30,7 @@ shinyUI(fluidPage(
         tags$b("Description"),
         "A population of size \\(Z\\) is organized into groups of size \\(N\\). Each individual can be understood as an AI researcher able to realize or ignore proposed norms of research and practice. Each group can be thought of as an organizational unit, such as a laboratory, university department, or collaborative, able to sustain shared norms.",
         tags$br(), tags$br(),
-        "Each individual has an initial endowment \\(b\\), viewed as the asset value at stake. In the simplest scenario, participants choose either to cooperate (\\(C\\)) by adhering to the proposed norm, and so to contribute a fraction $cb$ of their endowment to realizing adherence, or to defect (\\(D\\)), and contribute nothing. Contributing produces a cost in extra effort (e.g., taking additional precautions to ensure their research and business practices adhere to the proposed norm), or in restricted opportunities (e.g., by refusing to take on lucrative projects that would violate the proposed norm)."
+        "Each individual has an initial endowment \\(b\\), viewed as the asset value at stake. In the simplest scenario, participants choose either to cooperate (\\(C\\)) by adhering to the proposed norm, and so to contribute a fraction \\(cb\\) of their endowment to realizing adherence, or to defect (\\(D\\)), and contribute nothing. Contributing produces a cost in extra effort (e.g., taking additional precautions to ensure their research and business practices adhere to the proposed norm), or in restricted opportunities (e.g., by refusing to take on lucrative projects that would violate the proposed norm)."
       )
     ),
     column(
