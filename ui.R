@@ -60,21 +60,21 @@ shinyUI(fluidPage(
                   "Group size (\\(N\\)):",
                   min = 1,
                   max = 100,
-                  value = 50),
+                  value = 10),
       
       # Perceived risk of disaster
       sliderInput("perceivedRiskOfDisaster",
-                  "Perceived risk of disaster (\\(r\\)):",
+                  "Risk of disaster (\\(r\\)):",
                   min = 0,
                   max = 1,
-                  value = 0.25),
+                  value = 0.5),
       
       # Perceived cost of disaster
       sliderInput("perceivedCostOfDisaster",
-                  "Perceived cost of disaster (\\(d\\)):",
+                  "Cost of disaster (\\(d\\)):",
                   min = 0,
                   max = 1,
-                  value = 0.75),
+                  value = 0.5),
       
       # Cost of cooperation
       sliderInput("costOfCooperation",
@@ -102,18 +102,16 @@ shinyUI(fluidPage(
                   "Mutation rate (\\(\\mu\\)):",
                   min = 0,
                   max = 0.5,
-                  value = 0.05)
+                  value = 0.01)
       
     ),
     
     # Main Panel with Stationary Distribution + Simulation & Stats Panels
     mainPanel(
-      style = "padding: 10px; margin-bottom: 10px",
-      plotOutput("payoffsPlot", height = "350px"),
-      tags$br(),
-      plotOutput("stationaryDistributionPlot", height = "350px"),
-      tags$br(),
-      plotOutput("simulationPlot", height = "350px")
+      style = "padding: 10px; margin-bottom: 0px",
+      plotOutput("selectionGradientPlot", height = "300px"),
+      plotOutput("payoffsPlot", height = "300px"),
+      plotOutput("stationaryDistributionPlot", height = "300px")
     )
   )
 ))
