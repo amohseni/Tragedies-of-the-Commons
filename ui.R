@@ -59,50 +59,50 @@ shinyUI(fluidPage(
       sliderInput("groupSize",
                   "Group size (\\(N\\)):",
                   min = 1,
-                  max = 100,
-                  value = 10),
+                  max = 20,
+                  value = 6),
       
       # Perceived risk of disaster
       sliderInput("perceivedRiskOfDisaster",
                   "Risk of disaster (\\(r\\)):",
                   min = 0,
                   max = 1,
-                  value = 0.5),
+                  value = 0.8),
       
       # Perceived cost of disaster
       sliderInput("perceivedCostOfDisaster",
                   "Cost of disaster (\\(d\\)):",
                   min = 0,
                   max = 1,
-                  value = 0.5),
+                  value = 0.8),
       
       # Cost of cooperation
       sliderInput("costOfCooperation",
                   "Cost of cooperation (\\(c\\)):",
                   min = 0,
                   max = 1,
-                  value = 0.2),
+                  value = 0.1),
       
       # Critical fraction of cooperators required to avoid disaster risk
       sliderInput("criticalFraction",
                   "Critical fraction of cooperators required to avoid disaster risk (\\(n^*\\)):",
                   min = 0,
                   max = 1,
-                  value = 0.8),
+                  value = 0.6),
       
       # Selection coefficient
       sliderInput("selection",
                   "Selection coefficient (\\(\\lambda\\)):",
                   min = 0,
                   max = 10,
-                  value = 1),
+                  value = 5),
       
       # Mutation rate
       sliderInput("mutation",
                   "Mutation rate (\\(\\mu\\)):",
                   min = 0,
                   max = 0.5,
-                  value = 0.01)
+                  value = 0.1)
       
     ),
     

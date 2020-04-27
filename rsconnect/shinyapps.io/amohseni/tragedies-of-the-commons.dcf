@@ -5,8 +5,8 @@ account: amohseni
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1820118
-bundleId: 3065054
+bundleId: 3068485
 url: https://amohseni.shinyapps.io/tragedies-of-the-commons/
-when: 1587858363.87588
+when: 1587933992.48075
 asMultiple: FALSE
 asStatic: FALSE

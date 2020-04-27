@@ -36,7 +36,7 @@ shinyServer(function(input, output, session) {
     # as a function of the number of cooperators n_C in their group
     payoff_cooperator <-
       function(n_C) {
-        b * (n_C - n_crit >= 0) + (1 - r) * b * (1 - d) * (n_C - n_crit < 0) - (c * b)
+        b * (n_C - n_crit >= 0) + b * (1 - r *d) * (n_C - n_crit < 0) - (c * b)
       }
     payoff_defector <-
       function(n_C) {
@@ -49,24 +49,30 @@ shinyServer(function(input, output, session) {
       function(n_C_pop) {
         # Find the fraction of cooperators in the group
         x <- n_C_pop / Z
-        # Compute the payoff to cooperators for each (binomial) combination of cooperators and defectors
-        payoff_per_combination_cooperator <- function (k) {
-          x ^ k * (1 - x) ^ (N - k) * payoff_cooperator(k)
-        }
-        y <- sapply(c(0:N), payoff_per_combination_cooperator)
-        z <- sum(y)
+        # Compute the (binomially distributed) probability for each group 
+        # composed of k cooperators and (N - k) defectors
+        p <- dbinom(x = 0:N, size = N, prob = x)
+        # Define the vector that denotes the number of cooperators for each group
+        q <- 0:N
+        # Compute the payoffs to cooperators in each group
+        y <- sapply(c(0:N), payoff_cooperator)
+        # Find the expected payoff for cooperators across all groups
+        z <- sum(y * q * p) / sum(p * q)
         return(z)
       }
     mean_payoff_defector <-
       function(n_C_pop) {
-        # Find the fraction of cooperators in the population
-        x <- 1 - n_C_pop / Z
-        # Compute the payoff to cooperators for each (binomial) combination of cooperators and defectors
-        payoff_per_combination_defector <- function (k) {
-          x ^ k * (1 - x) ^ (N - k) * payoff_defector(k)
-        }
-        y <- sapply(c(0:N), payoff_per_combination_defector)
-        z <- sum(y)
+        # Find the fraction of cooperators in the group
+        x <- n_C_pop / Z
+        # Compute the (binomially distributed) probability for each group 
+        # composed of k cooperators and (N - k) defectors
+        p <- dbinom(x = 0:N, size = N, prob = x)
+        # Define the vector that denotes the number of defectors for each group
+        q <- N:0
+        # Compute the payoffs to cooperators in each group
+        y <- sapply(c(0:N), payoff_defector)
+        # Find the expected payoff for cooperators across all groups
+        z <- sum(y * q * p) / sum(p * q)
         return(z)
       }
     
@@ -190,8 +196,8 @@ shinyServer(function(input, output, session) {
     # Plot payoff functions
     plot_PayoffsDF <- ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strategy)) +
       geom_line(aes(color = Strategy), size = 2) + 
-      scale_color_manual(values = c("Black", "Red")) +
-      ggtitle("Mean Payoffs of Each Strategy") +
+      scale_color_manual(values = c("#3576BD", "Black")) +
+      ggtitle("Average Payoffs of Each Strategy") +
       labs(x = "Fraction of Cooperators", y = "Payoff") +
       theme_minimal() +
       theme(
@@ -285,7 +291,7 @@ shinyServer(function(input, output, session) {
     plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
       geom_line(size = 2, color = "#3576BD") +
       scale_color_manual(values = c("#3576BD")) +
-      ggtitle("Selection Gradient") +
+      ggtitle("Gradient of Selection") +
       labs(x = "Fraction of Cooperators", y = bquote('Selection for Cooperation')) +
       #ylim(-0.5, 0.5) +
       theme_minimal() +
