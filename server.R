@@ -94,15 +94,15 @@ shinyServer(function(input, output, session) {
     # Pr(n_C_pop -> n_C_pop + 1)
     Prob_n_C_Increase <-
       function(k) {
-        ((Z - k) / Z) * ((k / (Z - 1)) * (1 - M) / (1 + exp(
-          R * (mean_payoff_defector(k) - mean_payoff_cooperator(k))
-        )) + M * ((Z - k) / (Z - 1)))
+        (Z - k) / Z * (1 - M) * (1 + exp(R * (
+          mean_payoff_defector(k) - mean_payoff_cooperator(k)
+        ))) ^ -1 + M * ((Z - k) / (Z - 1))
       }
     # Pr(n_C_pop -> n_C_pop - 1)
     Prob_n_C_Decrease <- function(k) {
-      ((k) / Z) * (((Z - k) / (Z - 1)) * (1 - M) / (1 + exp(
-        R * (mean_payoff_cooperator(k) - mean_payoff_defector(k))
-      )) + M * (k / (Z - 1)))
+      k / Z * (1 - M)  * (1 + exp(R * (
+        mean_payoff_cooperator(k) - mean_payoff_defector(k)
+      ))) ^ -1 + M * (k / (Z - 1))
     }
     # Pr(n_C_pop -> n_C_pop)
     Prob_n_C_Stay <- function(k) {
@@ -126,8 +126,8 @@ shinyServer(function(input, output, session) {
     # SELECTION GADIENT
     # Now, use the transition matrix to compute the gradient of selection 
     # defined as G(i) = Prob_n_C_Increase(i) - Prob_n_C_Decrease(i).
-    Prob_n_C_Increase_vec <- sapply(c(seq(from = 1, to = Z, by = 1)), Prob_n_C_Increase)
-    Prob_n_C_Decrease_vec <- sapply(seq(from = 1, to = Z, by = 1), Prob_n_C_Decrease)
+    Prob_n_C_Increase_vec <- sapply(c(seq(from = 1, to = Z - 1, by = 1)), Prob_n_C_Increase)
+    Prob_n_C_Decrease_vec <- sapply(seq(from = 1, to = Z - 1, by = 1), Prob_n_C_Decrease)
     selectionGradient <- Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
     
     # STATIONARY DISTRIBUTION  
@@ -271,7 +271,7 @@ shinyServer(function(input, output, session) {
     selectionGradientSign <- (selectionGradient > 0)
     stableFixedPoint <- c()
     unstableFixedPoint <- c()
-    for (i in 1:(Z - 1)) {
+    for (i in 1:(Z - 2)) {
       if (selectionGradientSign[i] == TRUE &
           selectionGradientSign[i + 1] == FALSE) {
         stableFixedPoint <-
@@ -287,7 +287,7 @@ shinyServer(function(input, output, session) {
     # Plot the stationary distribution
     # Print the stationary distribution µ
     GradientDF <-
-      data.frame(N = seq(from = 1 / Z, to = 1, by = 1 / Z), Gradient = selectionGradient)
+      data.frame(N = seq(from = 1 / Z, to = 1 - 1 / Z, by = 1 / Z), Gradient = selectionGradient)
     plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
       geom_line(size = 2, color = "#3576BD") +
       scale_color_manual(values = c("#3576BD")) +
