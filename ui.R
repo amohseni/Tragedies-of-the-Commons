@@ -59,7 +59,7 @@ shinyUI(fluidPage(
       sliderInput("groupSize",
                   "Group size (\\(N\\)):",
                   min = 1,
-                  max = 20,
+                  max = 100,
                   value = 6),
       
       # Perceived risk of disaster

@@ -36,38 +36,30 @@ mean_payoff_cooperator <-
   function(n_C_pop) {
     # Find the fraction of cooperators in the group
     x <- n_C_pop / Z
-    # Compute the (binomially distributed) probability for each group
-    # composed of k cooperators and (N - k) defectors
+    # Compute the vector of (binomially distributed) probabilities for 
+    # each possible group composed of k cooperators and (N - k) defectors
     p <- dbinom(x = 0:N, size = N, prob = x)
-    # Define the vector that denotes the number of cooperators for each group
-    q <- 0:N
+    # Compute the vector of conditional probabilities (k/N) of being a cooperator in each combination
+    q <- 0:N / N
     # Compute the payoffs to cooperators in each group
     y <- sapply(c(0:N), payoff_cooperator)
     # Find the expected payoff for cooperators across all groups
-    if (sum(p * q) != 0) {
-      z <- sum(y * p * q) / sum(p * q)
-    } else { # Avoid diving by zero
-      z <- 0
-    }
+    z <- sum(y * q * p) / sum(p * q)
     return(z)
   }
 mean_payoff_defector <-
   function(n_C_pop) {
     # Find the fraction of cooperators in the group
     x <- n_C_pop / Z
-    # Compute the (binomially distributed) probability for each group
-    # composed of k cooperators and (N - k) defectors
+    # Compute the vector of (binomially distributed) probabilities for 
+    # each possible group composed of k cooperators and (N - k) defectors
     p <- dbinom(x = 0:N, size = N, prob = x)
-    # Define the vector that denotes the number of defectors for each group
-    q <- N:0
-    # Compute the payoffs to cooperators in each group
+    # Compute the vector of conditional probabilities ((N-k)/N) of being a defector in each combination
+    q <- N:0 / N
+    # Compute the payoffs to defectors in each group
     y <- sapply(c(0:N), payoff_defector)
-    # Find the expected payoff for cooperators across all groups
-    if (sum(p * q) != 0) {
-      z <- sum(y * p * q) / sum(p * q)
-    } else { # Avoid diving by zero
-      z <- 0
-    }
+    # Find the expected payoff for defectors across all groups
+    z <- sum(y * q * p) / sum(p * q)
     return(z)
   }
 
