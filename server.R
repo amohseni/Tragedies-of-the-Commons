@@ -5,6 +5,7 @@
 # Load packages
 library(shiny)
 library(ggplot2)
+library(expm)
 
 options(shiny.sanitize.errors = FALSE)
 
@@ -47,32 +48,42 @@ shinyServer(function(input, output, session) {
     # and the fraction of each type in the broader population n_C_pop
     mean_payoff_cooperator <-
       function(n_C_pop) {
-        # Find the fraction of cooperators in the group
-        x <- n_C_pop / Z
-        # Compute the vector of (binomially distributed) probabilities for 
-        # each possible group composed of k cooperators and (N - k) defectors
-        p <- dbinom(x = 0:N, size = N, prob = x)
-        # Compute the vector of conditional probabilities (k/N) of being a cooperator in each combination
-        q <- 0:N / N
-        # Compute the payoffs to cooperators in each group
-        y <- sapply(c(0:N), payoff_cooperator)
-        # Find the expected payoff for cooperators across all groups
-        z <- sum(y * q * p) / sum(p * q)
+        # Note: If there are no cooperators, just return 0
+        if (n_C_pop == 0) {
+          z <- 0
+        } else {
+          # Find the fraction of cooperators in the group
+          x <- n_C_pop / Z
+          # Compute the vector of (binomially distributed) probabilities for
+          # each possible group composed of k cooperators and (N - k) defectors
+          p <- dbinom(x = 0:N, size = N, prob = x)
+          # Compute the vector of conditional probabilities (k/N) of being a cooperator in each combination
+          q <- 0:N / N
+          # Compute the payoffs to cooperators in each group
+          y <- sapply(c(0:N), payoff_cooperator)
+          # Find the expected payoff for cooperators across all groups
+          z <- sum(y * q * p) / sum(p * q)
+        }
         return(z)
       }
     mean_payoff_defector <-
       function(n_C_pop) {
-        # Find the fraction of cooperators in the group
-        x <- n_C_pop / Z
-        # Compute the vector of (binomially distributed) probabilities for 
-        # each possible group composed of k cooperators and (N - k) defectors
-        p <- dbinom(x = 0:N, size = N, prob = x)
-        # Compute the vector of conditional probabilities ((N-k)/N) of being a defector in each combination
-        q <- N:0 / N
-        # Compute the payoffs to defectors in each group
-        y <- sapply(c(0:N), payoff_defector)
-        # Find the expected payoff for defectors across all groups
-        z <- sum(y * q * p) / sum(p * q)
+        # Note: If there are no defectors, just return 0
+        if (n_C_pop == Z) {
+          z <- 0
+        } else {
+          # Find the fraction of cooperators in the group
+          x <- n_C_pop / Z
+          # Compute the vector of (binomially distributed) probabilities for
+          # each possible group composed of k cooperators and (N - k) defectors
+          p <- dbinom(x = 0:N, size = N, prob = x)
+          # Compute the vector of conditional probabilities ((N-k)/N) of being a defector in each combination
+          q <- N:0 / N
+          # Compute the payoffs to defectors in each group
+          y <- sapply(c(0:N), payoff_defector)
+          # Find the expected payoff for defectors across all groups
+          z <- sum(y * q * p) / sum(p * q)
+        }
         return(z)
       }
     
@@ -94,15 +105,25 @@ shinyServer(function(input, output, session) {
     # Pr(n_C_pop -> n_C_pop + 1)
     Prob_n_C_Increase <-
       function(k) {
-        (Z - k) / Z * (1 - M) * (1 + exp(R * (
-          mean_payoff_defector(k) - mean_payoff_cooperator(k)
-        ))) ^ -1 + M * ((Z - k) / (Z - 1))
+        if (k < Z) {
+          z <- (k / Z) * (Z - k) / (Z - 1) * (1 - M) * (1 + exp(R * (
+            mean_payoff_defector(k) - mean_payoff_cooperator(k)
+          ))) ^ -1 + M / 2
+        } else {
+          z <- 0
+        }
+        return(z)
       }
     # Pr(n_C_pop -> n_C_pop - 1)
     Prob_n_C_Decrease <- function(k) {
-      k / Z * (1 - M)  * (1 + exp(R * (
-        mean_payoff_cooperator(k) - mean_payoff_defector(k)
-      ))) ^ -1 + M * (k / (Z - 1))
+      if (k > 0) {
+        z <- (k / Z) * (Z - k) / (Z - 1)  * (1 + exp(R * (
+          mean_payoff_cooperator(k) - mean_payoff_defector(k)
+        ))) ^ -1 + M / 2
+      } else {
+        z <- 0
+      }
+      return(z)
     }
     # Pr(n_C_pop -> n_C_pop)
     Prob_n_C_Stay <- function(k) {
@@ -110,24 +131,43 @@ shinyServer(function(input, output, session) {
     }
     
     # TRANSITION MATRIX
-    # We compute the transition matrix by recursive applications of the transition probabilities
-    MPM <- outer(
-      0:Z,
-      0:Z,
-      FUN = function(row, column)
-        ifelse(column == row + 1, Prob_n_C_Increase(row),
-               ifelse(
-                 column == row, Prob_n_C_Stay(row),
-                 ifelse(column == row - 1, Prob_n_C_Decrease(row),
-                        0)
-               ))
-    )
+    # We compute the transition matrix by recursive applications of the transition probabilities.
+    # Create an empty transition matrix.
+    MPM <- matrix(
+      data = NA,
+      nrow = Z + 1,
+      ncol = Z + 1,
+      byrow = TRUE
+    ) 
+    # Fill the transition matrix
+    for (i in 1:(Z + 1)) { # For each row 
+      for (j in 1:(Z + 1)) {# For each column
+        if (j == (i - 1)) { # If the state has one fewer Cooperator
+          MPM[i, j] <- Prob_n_C_Decrease(i - 1)
+        }
+        if (j == i) { # If the state is the same
+          MPM[i, j] <- Prob_n_C_Stay(i - 1)
+        }
+        if (j == (i + 1)) { # If the state has one more Cooperator
+          MPM[i, j] <- Prob_n_C_Increase(i - 1)
+        }
+        if ((j != (i - 1)) & (j != i) & (j != (i + 1))) {
+          MPM[i, j] <- 0
+        }
+      }
+    }
     
     # SELECTION GADIENT
     # Now, use the transition matrix to compute the gradient of selection 
     # defined as G(i) = Prob_n_C_Increase(i) - Prob_n_C_Decrease(i).
-    Prob_n_C_Increase_vec <- sapply(c(seq(from = 1, to = Z - 1, by = 1)), Prob_n_C_Increase)
-    Prob_n_C_Decrease_vec <- sapply(seq(from = 1, to = Z - 1, by = 1), Prob_n_C_Decrease)
+    Prob_n_C_Increase_vec <- rep(0, times = (Z - 1))
+    Prob_n_C_Decrease_vec <- rep(0, times = (Z - 1))
+    for (i in 2:Z) {
+      Prob_n_C_Increase_vec[i - 1] <- MPM[i, i + 1]
+    }
+    for (i in 2:Z) {
+      Prob_n_C_Decrease_vec[i - 1] <- MPM[i, i - 1]
+    }
     selectionGradient <- Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
     
     # STATIONARY DISTRIBUTION  
@@ -192,6 +232,10 @@ shinyServer(function(input, output, session) {
     # Import relevant variables
     N <- as.numeric(input$groupSize)
     PayoffsDF <- computeDynamics()[[1]]
+    
+    # Trim {0, 1} endopoints of C & D payoffs (for aesthetics)
+    PayoffsDF[which(PayoffsDF$N == 0 & PayoffsDF$Strategy == "Cooperate"), 2] <- NA
+    PayoffsDF[which(PayoffsDF$N == 1 & PayoffsDF$Strategy == "Defect"), 2] <- NA
     
     # Plot payoff functions
     plot_PayoffsDF <- ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strategy)) +
@@ -266,23 +310,59 @@ shinyServer(function(input, output, session) {
     # Import relevant variables
     selectionGradient <- computeDynamics()[[4]]
     
-    # We find all (stable & unstable) fixed points using the selection gradient
-    # find the sign of the 
-    selectionGradientSign <- (selectionGradient > 0)
+    # Find all of the (stable & unstable) fixed points using the selection gradient.
+    # Creat the empty vectors in which to store the fixed points once we have determined their location
     stableFixedPoint <- c()
     unstableFixedPoint <- c()
+    # Determine the sign of the selection gradient for each state
+    selectionGradientSign <- (selectionGradient > 0)
+    # Find where the sign of the selection gradient flips.
+    # These will correspond to the interior fixed points.
     for (i in 1:(Z - 2)) {
+      # Find the (interior) stable states by locating where the gradient flips from positive to negative.
       if (selectionGradientSign[i] == TRUE &
           selectionGradientSign[i + 1] == FALSE) {
         stableFixedPoint <-
           append(stableFixedPoint, i + 1 / 2, after = length(stableFixedPoint))
       }
+      # Find the (interior) unstable states by locating where the gradient flips from negative to positive
       if (selectionGradientSign[i] == FALSE &
           selectionGradientSign[i + 1] == TRUE) {
         unstableFixedPoint <-
           append(unstableFixedPoint, i + 1 / 2, after = length(unstableFixedPoint))
       }
     }
+    # Determine the exterior (stable & unstable) fixed points using the selection gradient
+    # First, we consider the two simple cases where one strategy dominates the other:
+    # 1. The dynamics is such that Cooperate dominates Defect,
+    # then the fixed pointe structure simplifies to 0-unstable & 1-stable.
+    if (all(selectionGradient >= 0)) {
+      stableFixedPoint <- 1
+      unstableFixedPoint <- 0
+    }
+    # 2. The dynamics is such that Defect dominates Cooperate,
+    # then the fixed pointe structure is 1-unstable & 0-stable.
+    if (all(selectionGradient <= 0)) {
+      stableFixedPoint <- 0
+      unstableFixedPoint <- 1
+    }
+    # If neither strategy dominates the other, 
+    # then we find whether the first and last inteior fixed point are stable or unstable,
+    # and deduce that their correponding exterior fixed point must exhibit the opposite stability.
+    if (!all(selectionGradient >= 0) & !all(selectionGradient <= 0)) {
+      # Find the fixed point closest to 0, and infer that the fixed point at 0 has the opposite stability
+      if (stableFixedPoint[1] < unstableFixedPoint[1]) {
+        append(unstableFixedPoint, 0, after = 0)
+      } else {
+        append(stableFixedPoint, 0, after = 0)
+      }
+      if (stableFixedPoint[length(stableFixedPoint)] > unstableFixedPoint[length(unstableFixedPoint)]) {
+        append(unstableFixedPoint, 1, after = length(unstableFixedPoint))
+      } else {
+        append(stableFixedPoint, 1, after = length(stableFixedPoint))
+      }
+    }
+    
     
     # Plot the stationary distribution
     # Print the stationary distribution µ

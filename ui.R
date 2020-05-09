@@ -40,7 +40,7 @@ shinyUI(fluidPage(
         "A successful agreement is reached if the overall number of contributors to the public group exceeds a certain threshold \\(n^*cb\\). In that case, all participants will keep whatever they have. Otherwise, with probability \\(r\\) corresponding to the risk of disaster if agreement is not attained, everyone in the group will lose a portion \\(d \\in [0,1]\\) of the payoff she has accrued. That is, if \\(d=1\\), individuals risk losing all of their accrued payoffs if they fail to come to an agreement, while \\(d=0\\) represents the case where failure to reach an agreement poses no risk of negative consequences.",
         tags$br(), tags$br(),
         "The payoffs to each action in a group of size \\(N\\) when \\(n_C\\) individuals are cooperating are given by
-        $$ \\pi_C(n_C) = b \\Theta (n_C-n^*) + (1-r) b (1-d \\Theta(n_C-n^*)) - cb,$$
+        $$ \\pi_C(n_C) = b \\Theta (n_C-n^*) + b (1-rd) \\Theta(n_C-n^*) - cb,$$
         $$ \\pi_D(n_C) = \\pi_D(n_C) + cb $$
         where \\(\\Theta\\) is the heaviside step function."
       )
@@ -59,7 +59,7 @@ shinyUI(fluidPage(
       sliderInput("groupSize",
                   "Group size (\\(N\\)):",
                   min = 1,
-                  max = 100,
+                  max = 20,
                   value = 6),
       
       # Perceived risk of disaster
@@ -71,7 +71,7 @@ shinyUI(fluidPage(
       
       # Perceived cost of disaster
       sliderInput("perceivedCostOfDisaster",
-                  "Cost of disaster (\\(d\\)):",
+                  "Magnitude of disaster (\\(d\\)):",
                   min = 0,
                   max = 1,
                   value = 0.8),
