@@ -260,6 +260,8 @@ for (i in 2:Z) {
   Prob_n_C_Decrease_vec[i - 1] <- FP[i, i - 1]
 }
 selectionGradient <- Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
+selectionGradient <- append(selectionGradient, 0, after = length(selectionGradient))
+selectionGradient <- append(selectionGradient, 0, after = 0)
 
 # Find all of the (stable & unstable) fixed points using the selection gradient.
 # Creat the empty vectors in which to store the fixed points once we have determined their location
@@ -274,13 +276,13 @@ for (i in 1:(Z - 2)) {
   if (selectionGradientSign[i] == TRUE &
       selectionGradientSign[i + 1] == FALSE) {
     stableFixedPoint <-
-      append(stableFixedPoint, i + 1 / 2, after = length(stableFixedPoint))
+      append(stableFixedPoint, i - 1 / 2, after = length(stableFixedPoint))
   }
   # Find the (interior) unstable states by locating where the gradient flips from negative to positive
   if (selectionGradientSign[i] == FALSE &
       selectionGradientSign[i + 1] == TRUE) {
     unstableFixedPoint <-
-      append(unstableFixedPoint, i + 1 / 2, after = length(unstableFixedPoint))
+      append(unstableFixedPoint, i - 1 / 2, after = length(unstableFixedPoint))
   }
 }
 # Determine the exterior (stable & unstable) fixed points using the selection gradient
@@ -326,7 +328,7 @@ if (!all(selectionGradient >= 0) &
 # Plot the stationary distribution
 # Print the stationary distribution µ
 GradientDF <-
-  data.frame(N = seq(from = 1 / Z, to = 1 - 1 / Z, by = 1 / Z), Gradient = selectionGradient)
+  data.frame(N = seq(from = 0, to = 1, by = 1 / Z), Gradient = selectionGradient)
 plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
   geom_line(size = 2, color = "#3576BD") +
   scale_color_manual(values = c("#3576BD")) +
