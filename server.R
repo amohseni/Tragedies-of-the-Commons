@@ -133,7 +133,7 @@ shinyServer(function(input, output, session) {
     # TRANSITION MATRIX
     # We compute the transition matrix by recursive applications of the transition probabilities.
     # Create an empty transition matrix.
-    MPM <- matrix(
+    FP <- matrix(
       data = NA,
       nrow = Z + 1,
       ncol = Z + 1,
@@ -143,16 +143,16 @@ shinyServer(function(input, output, session) {
     for (i in 1:(Z + 1)) { # For each row 
       for (j in 1:(Z + 1)) {# For each column
         if (j == (i - 1)) { # If the state has one fewer Cooperator
-          MPM[i, j] <- Prob_n_C_Decrease(i - 1)
+          FP[i, j] <- Prob_n_C_Decrease(i - 1)
         }
         if (j == i) { # If the state is the same
-          MPM[i, j] <- Prob_n_C_Stay(i - 1)
+          FP[i, j] <- Prob_n_C_Stay(i - 1)
         }
         if (j == (i + 1)) { # If the state has one more Cooperator
-          MPM[i, j] <- Prob_n_C_Increase(i - 1)
+          FP[i, j] <- Prob_n_C_Increase(i - 1)
         }
         if ((j != (i - 1)) & (j != i) & (j != (i + 1))) {
-          MPM[i, j] <- 0
+          FP[i, j] <- 0
         }
       }
     }
@@ -163,10 +163,10 @@ shinyServer(function(input, output, session) {
     Prob_n_C_Increase_vec <- rep(0, times = (Z - 1))
     Prob_n_C_Decrease_vec <- rep(0, times = (Z - 1))
     for (i in 2:Z) {
-      Prob_n_C_Increase_vec[i - 1] <- MPM[i, i + 1]
+      Prob_n_C_Increase_vec[i - 1] <- FP[i, i + 1]
     }
     for (i in 2:Z) {
-      Prob_n_C_Decrease_vec[i - 1] <- MPM[i, i - 1]
+      Prob_n_C_Decrease_vec[i - 1] <- FP[i, i - 1]
     }
     selectionGradient <- Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
     
@@ -188,7 +188,7 @@ shinyServer(function(input, output, session) {
                         ncol = Z + 1)
     for (k in 2:(Z + 1)) {
       for (i in 2:k) {
-        Mu0Matrix[k, i - 1] <- MPM[i - 1, i] / MPM[i, i - 1]
+        Mu0Matrix[k, i - 1] <- FP[i - 1, i] / FP[i, i - 1]
       }
     }
     # Take the product of the rows of Mu0Matrix
@@ -206,7 +206,7 @@ shinyServer(function(input, output, session) {
                        ncol = Z + 1)
     for (k in 2:(Z + 1)) {
       for (i in 2:k) {
-        MuMatrix[k, i - 1] <- MPM[i - 1, i] / MPM[i, i - 1]
+        MuMatrix[k, i - 1] <- FP[i - 1, i] / FP[i, i - 1]
       }
     }
     for (i in 1:(Z + 1)) {
@@ -218,7 +218,7 @@ shinyServer(function(input, output, session) {
     return(
       list(
         PayoffsDF,
-        MPM,
+        FP,
         MuVector,
         selectionGradient
       )
@@ -337,35 +337,48 @@ shinyServer(function(input, output, session) {
     # 1. The dynamics is such that Cooperate dominates Defect,
     # then the fixed pointe structure simplifies to 0-unstable & 1-stable.
     if (all(selectionGradient >= 0)) {
-      stableFixedPoint <- 1
+      stableFixedPoint <- Z
       unstableFixedPoint <- 0
     }
     # 2. The dynamics is such that Defect dominates Cooperate,
     # then the fixed pointe structure is 1-unstable & 0-stable.
     if (all(selectionGradient <= 0)) {
       stableFixedPoint <- 0
-      unstableFixedPoint <- 1
+      unstableFixedPoint <- Z
     }
     # If neither strategy dominates the other, 
     # then we find whether the first and last inteior fixed point are stable or unstable,
     # and deduce that their correponding exterior fixed point must exhibit the opposite stability.
-    if (!all(selectionGradient >= 0) & !all(selectionGradient <= 0)) {
-      # Find the fixed point closest to 0, and infer that the fixed point at 0 has the opposite stability
-      if (stableFixedPoint[1] < unstableFixedPoint[1]) {
-        append(unstableFixedPoint, 0, after = 0)
+    if (!all(selectionGradient >= 0) &
+        !all(selectionGradient <= 0)) {
+      # Check if there is only an interior stable unstable state,
+      # then both exterior fixed points are stable.
+      if (is.null(stableFixedPoint)) {
+        stableFixedPoint <- c(0, Z)
       } else {
-        append(stableFixedPoint, 0, after = 0)
-      }
-      if (stableFixedPoint[length(stableFixedPoint)] > unstableFixedPoint[length(unstableFixedPoint)]) {
-        append(unstableFixedPoint, 1, after = length(unstableFixedPoint))
-      } else {
-        append(stableFixedPoint, 1, after = length(stableFixedPoint))
+        # Find the fixed point closest to 0, and infer that the fixed point at 0 has the opposite stability
+        if (stableFixedPoint[1] < unstableFixedPoint[1]) {
+          unstableFixedPoint <- append(unstableFixedPoint, 0, after = 0)
+        } else {
+          stableFixedPoint <- append(stableFixedPoint, 0, after = 0)
+        }
+        # Find the fixed point closest to Z, and infer that the fixed point at Z has the opposite stability
+        if (stableFixedPoint[length(stableFixedPoint)] > unstableFixedPoint[length(unstableFixedPoint)]) {
+          unstableFixedPoint <-
+            append(unstableFixedPoint, Z, after = length(unstableFixedPoint))
+        } else {
+          stableFixedPoint <-
+            append(stableFixedPoint, Z, after = length(stableFixedPoint))
+        }
+        # Alternatively, if there is only an interior stable unstable state,
+        # then both exterior fixed points are stable.
+        if (is.null(stableFixedPoint)) {
+          stableFixedPoint <- c(0, Z)
+        }
       }
     }
     
-    
-    # Plot the stationary distribution
-    # Print the stationary distribution µ
+    # Plot the stationary distribution µ
     GradientDF <-
       data.frame(N = seq(from = 1 / Z, to = 1 - 1 / Z, by = 1 / Z), Gradient = selectionGradient)
     plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
@@ -373,7 +386,6 @@ shinyServer(function(input, output, session) {
       scale_color_manual(values = c("#3576BD")) +
       ggtitle("Gradient of Selection") +
       labs(x = "Fraction of Cooperators", y = bquote('Selection for Cooperation')) +
-      #ylim(-0.5, 0.5) +
       theme_minimal() +
       theme(
         plot.title = element_text(

@@ -8,7 +8,7 @@ library(expm)
 
 # Define global variables
 Z <- 100 # The size of the population
-N <- 10 # The size of groups 
+N <- 4 # The size of groups 
 # n_C <- 10 # The number of cooperators
 # n_D <- N - n_C # The number of defectors
 r <- 1 # The risk of disaster occuring in the absence of cooperation succeeding
@@ -261,43 +261,67 @@ for (i in 2:Z) {
 }
 selectionGradient <- Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
 
-
-# We find all (stable & unstable) fixed points using the selection gradient
-# find the sign of the 
-selectionGradientSign <- (selectionGradient > 0)
+# Find all of the (stable & unstable) fixed points using the selection gradient.
+# Creat the empty vectors in which to store the fixed points once we have determined their location
 stableFixedPoint <- c()
 unstableFixedPoint <- c()
+# Determine the sign of the selection gradient for each state
+selectionGradientSign <- (selectionGradient > 0)
+# Find where the sign of the selection gradient flips.
+# These will correspond to the interior fixed points.
 for (i in 1:(Z - 2)) {
+  # Find the (interior) stable states by locating where the gradient flips from positive to negative.
   if (selectionGradientSign[i] == TRUE &
       selectionGradientSign[i + 1] == FALSE) {
     stableFixedPoint <-
       append(stableFixedPoint, i + 1 / 2, after = length(stableFixedPoint))
   }
+  # Find the (interior) unstable states by locating where the gradient flips from negative to positive
   if (selectionGradientSign[i] == FALSE &
       selectionGradientSign[i + 1] == TRUE) {
     unstableFixedPoint <-
       append(unstableFixedPoint, i + 1 / 2, after = length(unstableFixedPoint))
   }
 }
-
-# We find all (stable & unstable) fixed points using the selection gradient
-# find the sign of the 
-selectionGradientSign <- (selectionGradient > 0)
-stableFixedPoint <- c()
-unstableFixedPoint <- c()
-for (i in 1:(Z - 1)) {
-  if (selectionGradientSign[i] == TRUE &
-      selectionGradientSign[i + 1] == FALSE) {
-    stableFixedPoint <-
-      append(stableFixedPoint, i + 1 / 2, after = length(stableFixedPoint))
-  }
-  if (selectionGradientSign[i] == FALSE &
-      selectionGradientSign[i + 1] == TRUE) {
-    unstableFixedPoint <-
-      append(unstableFixedPoint, i + 1 / 2, after = length(unstableFixedPoint))
+# Determine the exterior (stable & unstable) fixed points using the selection gradient
+# First, we consider the two simple cases where one strategy dominates the other:
+# 1. The dynamics is such that Cooperate dominates Defect,
+# then the fixed pointe structure simplifies to 0-unstable & 1-stable.
+if (all(selectionGradient >= 0)) {
+  stableFixedPoint <- Z
+  unstableFixedPoint <- 0
+}
+# 2. The dynamics is such that Defect dominates Cooperate,
+# then the fixed pointe structure is 1-unstable & 0-stable.
+if (all(selectionGradient <= 0)) {
+  stableFixedPoint <- 0
+  unstableFixedPoint <- Z
+}
+# then we find whether the first and last inteior fixed point are stable or unstable,
+# and deduce that their correponding exterior fixed point must exhibit the opposite stability.
+if (!all(selectionGradient >= 0) &
+    !all(selectionGradient <= 0)) {
+  # Check if there is only an interior stable unstable state,
+  # then both exterior fixed points are stable.
+  if (is.null(stableFixedPoint)) {
+    stableFixedPoint <- c(0, Z)
+  } else {
+    # Find the fixed point closest to 0, and infer that the fixed point at 0 has the opposite stability
+    if (stableFixedPoint[1] < unstableFixedPoint[1]) {
+      unstableFixedPoint <- append(unstableFixedPoint, 0, after = 0)
+    } else {
+      stableFixedPoint <- append(stableFixedPoint, 0, after = 0)
+    }
+    # Find the fixed point closest to Z, and infer that the fixed point at Z has the opposite stability
+    if (stableFixedPoint[length(stableFixedPoint)] > unstableFixedPoint[length(unstableFixedPoint)]) {
+      unstableFixedPoint <-
+        append(unstableFixedPoint, Z, after = length(unstableFixedPoint))
+    } else {
+      stableFixedPoint <-
+        append(stableFixedPoint, Z, after = length(stableFixedPoint))
+    }
   }
 }
-
 
 # Plot the stationary distribution
 # Print the stationary distribution µ
