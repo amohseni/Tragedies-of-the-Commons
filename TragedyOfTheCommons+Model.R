@@ -8,30 +8,36 @@ library(expm)
 
 # Define global variables
 Z <- 100 # The size of the population
-N <- 4 # The size of groups 
+N <- 20 # The size of groups
 # n_C <- 10 # The number of cooperators
 # n_D <- N - n_C # The number of defectors
-r <- 1 # The risk of disaster occuring in the absence of cooperation succeeding
-d <- 1 # The cost of disaster (in terms of te proportion of endownments lost) if cooperation fails and disaster occurs
+r <-
+  1 # The risk of disaster occuring in the absence of cooperation succeeding
+d <-
+  0.03 # The cost of disaster (in terms of te proportion of endownments lost) if cooperation fails and disaster occurs
 b <- 1 # The initial endowment of each individual
-c <- .1 # The proportion of the endowment contributed by cooperators
-p_crit <- 0.8 # The critical number of cooperators at which cooperation succeeds
-n_crit <- N * p_crit # The critical number of cooperators at which cooperation succeeds
-R <- 1 # The rationlaity coefficient (0:= random selection; 1:= replicator dynamics; ∞ := best reponse dynamics)
-M <- 0.1 # Mutation/error/noise parameter (portion of the time a random strategy is chosen)
+c <- 0 # The proportion of the endowment contributed by cooperators
+p_crit <-
+  1 # The critical number of cooperators at which cooperation succeeds
+n_crit <-
+  N * p_crit # The critical number of cooperators at which cooperation succeeds
+R <-
+  5 # The rationlaity coefficient (0:= random selection; 1:= replicator dynamics; ∞ := best reponse dynamics)
+M <-
+  0.1 # Mutation/error/noise parameter (portion of the time a random strategy is chosen)
 
 # Define the payoffs to each cooperators and defectors as follows,
-# as a function of the number of cooperators n_c, their 
+# as a function of the number of cooperators n_c, their
 payoff_cooperator <-
   function(n_C) {
-    b * (n_C - n_crit >= 0) + b * (1 - r *d) * (n_C - n_crit < 0) - (c * b)
+    b * (n_C - n_crit >= 0) + b * (1 - r * d) * (n_C - n_crit < 0) - (c * b)
   }
 payoff_defector <-
   function(n_C) {
     payoff_cooperator(n_C) + (c * b)
   }
 # Now, define the _average_ payoff to each type
-# as a function of the number of group sizes 
+# as a function of the number of group sizes
 # and the fraction of each type in the broader population
 mean_payoff_cooperator <-
   function(n_C_pop) {
@@ -43,7 +49,9 @@ mean_payoff_cooperator <-
       x <- n_C_pop / Z
       # Compute the vector of (binomially distributed) probabilities for
       # each possible group composed of k cooperators and (N - k) defectors
-      p <- dbinom(x = 0:N, size = N, prob = x)
+      p <- dbinom(x = 0:N,
+                  size = N,
+                  prob = x)
       # Compute the vector of conditional probabilities (k/N) of being a cooperator in each combination
       q <- 0:N / N
       # Compute the payoffs to cooperators in each group
@@ -63,7 +71,9 @@ mean_payoff_defector <-
       x <- n_C_pop / Z
       # Compute the vector of (binomially distributed) probabilities for
       # each possible group composed of k cooperators and (N - k) defectors
-      p <- dbinom(x = 0:N, size = N, prob = x)
+      p <- dbinom(x = 0:N,
+                  size = N,
+                  prob = x)
       # Compute the vector of conditional probabilities ((N-k)/N) of being a defector in each combination
       q <- N:0 / N
       # Compute the payoffs to defectors in each group
@@ -75,8 +85,12 @@ mean_payoff_defector <-
   }
 
 # Create payoff data frame
-payoff_cooperator_vec <- sapply(c(seq(from = 0, to = Z, by = 1)), mean_payoff_cooperator)
-payoff_defector_vec <- sapply(seq(from = 0, to = Z, by = 1), mean_payoff_defector)
+payoff_cooperator_vec <-
+  sapply(c(seq(
+    from = 0, to = Z, by = 1
+  )), mean_payoff_cooperator)
+payoff_defector_vec <-
+  sapply(seq(from = 0, to = Z, by = 1), mean_payoff_defector)
 PayoffsDF <- data.frame(
   N = rep(seq(
     from = 0, to = 1, by = 1 / Z
@@ -86,12 +100,15 @@ PayoffsDF <- data.frame(
 )
 
 # Trim {0, 1} endopoints of C & D payoffs (for aesthetics)
-PayoffsDF[which(PayoffsDF$N == 0 & PayoffsDF$Strategy == "Cooperate"), 2] <- NA
-PayoffsDF[which(PayoffsDF$N == 1 & PayoffsDF$Strategy == "Defect"), 2] <- NA
+PayoffsDF[which(PayoffsDF$N == 0 &
+                  PayoffsDF$Strategy == "Cooperate"), 2] <- NA
+PayoffsDF[which(PayoffsDF$N == 1 &
+                  PayoffsDF$Strategy == "Defect"), 2] <- NA
 
 # Plot payoff functions
-plot_PayoffsDF <- ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strategy)) +
-  geom_line(aes(color = Strategy), size = 2) + 
+plot_PayoffsDF <-
+  ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strategy)) +
+  geom_line(aes(color = Strategy), size = 2) +
   scale_color_manual(values = c("#3576BD", "Black")) +
   ggtitle("Average Payoffs of Each Strategy") +
   labs(x = "Fraction of Cooperators", y = "Payoff") +
@@ -103,7 +120,7 @@ plot_PayoffsDF <- ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strate
       lineheight = 1.15
     ),
     legend.title = element_blank(),
-    legend.position="bottom",
+    legend.position = "bottom",
     legend.spacing.x = unit(10, 'pt'),
     legend.text = element_text(size = 14),
     axis.title.x =  element_text(margin = margin(t = 15, unit = "pt")),
@@ -113,7 +130,7 @@ plot_PayoffsDF <- ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strate
 print(plot_PayoffsDF)
 
 # Specify the transition probabilities of the population changing
-# from a state with n_C_pop cooperators in the population 
+# from a state with n_C_pop cooperators in the population
 # to one with n_C_pop + 1, n_C_pop - 1, or n_C_pop cooperators.
 
 # Pr(n_C_pop -> n_C_pop + 1)
@@ -169,7 +186,7 @@ for (i in 1:(Z + 1)) {
   }
 }
 
-# STATIONARY DISTRIBUTION  
+# STATIONARY DISTRIBUTION
 
 # Note: We know that the stationary distribution µ exists because the addition of mutation makes the Markov process Ergodic
 # That is: Where the Fermi Process is already finite, and aperiodic,
@@ -224,7 +241,6 @@ MuDF <-
 plot_MuDF <- ggplot(data = MuDF, aes(x = N, y = Probability)) +
   geom_area(
     stat = "identity",
-    #width = 1,
     fill = "#3576BD",
     colour = "#3576BD",
     size = 0.1
@@ -247,7 +263,7 @@ print(plot_MuDF)
 
 
 # SELECTION GADIENT
-# Now, use the transition matrix to compute the gradient of selection 
+# Now, use the transition matrix to compute the gradient of selection
 # defined as G(i) = Prob_n_C_Increase(i) - Prob_n_C_Decrease(i).
 # Create the empty vectors of transitio probabilities
 Prob_n_C_Increase_vec <- rep(0, times = (Z - 1))
@@ -260,7 +276,8 @@ for (i in 2:Z) {
   Prob_n_C_Decrease_vec[i - 1] <- FP[i, i - 1]
 }
 selectionGradient <- Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
-selectionGradient <- append(selectionGradient, 0, after = length(selectionGradient))
+selectionGradient <-
+  append(selectionGradient, 0, after = length(selectionGradient))
 selectionGradient <- append(selectionGradient, 0, after = 0)
 
 # Find all of the (stable & unstable) fixed points using the selection gradient.
@@ -271,7 +288,7 @@ unstableFixedPoint <- c()
 selectionGradientSign <- (selectionGradient > 0)
 # Find where the sign of the selection gradient flips.
 # These will correspond to the interior fixed points.
-for (i in 1:(Z - 2)) {
+for (i in 1:(Z - 1)) {
   # Find the (interior) stable states by locating where the gradient flips from positive to negative.
   if (selectionGradientSign[i] == TRUE &
       selectionGradientSign[i + 1] == FALSE) {
@@ -324,17 +341,62 @@ if (!all(selectionGradient >= 0) &
     }
   }
 }
+# Create a data frame for the fixed points
+DFfixedPoints <-
+  matrix(
+    data = NA,
+    nrow = length(stableFixedPoint) + length(unstableFixedPoint),
+    ncol = 3
+  )
+DFfixedPoints[1:length(stableFixedPoint), 3] <- "Stable"
+DFfixedPoints[(length(stableFixedPoint) + 1):(length(stableFixedPoint) + length(unstableFixedPoint)), 3] <-
+  "Unstable"
+DFfixedPoints[, 1] <-
+  as.numeric(c(stableFixedPoint, unstableFixedPoint))
+DFfixedPoints[, 2] <-
+  as.numeric(rep(0, times = length(stableFixedPoint) + length(unstableFixedPoint)))
+
+# Now, determine the line segments to represent the direction of selection
+allFixedPoints <-
+  sort(c(stableFixedPoint, unstableFixedPoint), decreasing = FALSE)
+numberOfLineSegments <- length(allFixedPoints) - 1
+# Create a data frame for the line segments
+lineSegmentMatrix <-
+  data.frame(matrix(data = NA, nrow = numberOfLineSegments, ncol = 2))
+colnames(lineSegmentMatrix) <- c("start", "end")
+# If the fixed fixed point is stable
+if (stableFixedPoint[1] < unstableFixedPoint[1]) {
+  lineSegmentMatrix[1, ] <- allFixedPoints[2:1]
+  if (numberOfLineSegments > 1) {
+    lineSegmentMatrix[2, ] <- allFixedPoints[2:3]
+    
+  }
+  if (numberOfLineSegments > 2) {
+    lineSegmentMatrix[3, ] <- allFixedPoints[4:3]
+  }
+}
+# If the fixed fixed point is unstable
+if (stableFixedPoint[1] > unstableFixedPoint[1]) {
+  lineSegmentMatrix[1, ] <- allFixedPoints[1:2]
+  if (numberOfLineSegments > 1) {
+    lineSegmentMatrix[2, ] <- allFixedPoints[3:2]
+    
+  }
+  if (numberOfLineSegments > 2) {
+    lineSegmentMatrix[3, ] <- allFixedPoints[3:4]
+  }
+}
 
 # Plot the stationary distribution
 # Print the stationary distribution µ
 GradientDF <-
   data.frame(N = seq(from = 0, to = 1, by = 1 / Z), Gradient = selectionGradient)
-plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
+plot_GradientDF <-
+  ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
   geom_line(size = 2, color = "#3576BD") +
   scale_color_manual(values = c("#3576BD")) +
   ggtitle("Gradient of Selection") +
   labs(x = "Fraction of Cooperators", y = bquote('Selection for Cooperation')) +
-  #ylim(-0.5, 0.5) +
   theme_minimal() +
   theme(
     plot.title = element_text(
@@ -345,11 +407,13 @@ plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
     axis.title.x =  element_text(margin = margin(t = 15, unit = "pt")),
     axis.title.y =  element_text(margin = margin(r = 15, unit = "pt")),
     legend.title = element_blank(),
-    legend.position="bottom",
+    legend.position = "top",
     legend.spacing.x = unit(10, 'pt'),
     legend.text = element_text(size = 14),
     text = element_text(size = 16)
-  ) + geom_point(
+  ) +
+  scale_shape_manual(c("Stable", "Unstable")) +
+  geom_point(
     # Plot stable fixed points
     data = data.frame(x = stableFixedPoint / Z, y = rep(0, times = length(stableFixedPoint))),
     aes(x, y),
@@ -358,7 +422,23 @@ plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
     fill = "#3576BD",
     size = 5,
     stroke = 2
-  ) + geom_point(
+  ) +
+  geom_segment(
+    # Plot flow lines
+    data = lineSegmentMatrix / Z,
+    aes(
+      x = start,
+      xend = end,
+      y = 0,
+      yend = 0
+    ),
+    size = 2,
+    color = "black",
+    arrow = arrow(length = unit(.4, "cm")),
+    linejoin = "mitre",
+    lineend = "butt"
+  ) +
+  geom_point(
     # Plot unstable fixed points
     data = data.frame(x = unstableFixedPoint / Z, y = rep(0, times = length(unstableFixedPoint))),
     aes(x, y),
@@ -367,6 +447,5 @@ plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
     fill = "white",
     size = 5,
     stroke = 2
-  ) + scale_shape_manual(c("Stable", "Unstable"), aesthetics = "shape", breaks = waiver())
+  )
 print(plot_GradientDF)
-

@@ -7,6 +7,7 @@ library(shiny)
 library(ggplot2)
 library(expm)
 
+# Allow for informative error messages
 options(shiny.sanitize.errors = FALSE)
 
 Z <- 100 # The size of the population
@@ -320,7 +321,7 @@ shinyServer(function(input, output, session) {
     selectionGradientSign <- (selectionGradient > 0)
     # Find where the sign of the selection gradient flips.
     # These will correspond to the interior fixed points.
-    for (i in 1:(Z - 2)) {
+    for (i in 1:(Z - 1)) {
       # Find the (interior) stable states by locating where the gradient flips from positive to negative.
       if (selectionGradientSign[i] == TRUE &
           selectionGradientSign[i + 1] == FALSE) {
@@ -379,11 +380,42 @@ shinyServer(function(input, output, session) {
         }
       }
     }
+    # Now, determine the line segments to represent the direction of selection
+    allFixedPoints <-
+      sort(c(stableFixedPoint, unstableFixedPoint), decreasing = FALSE)
+    numberOfLineSegments <- length(allFixedPoints) - 1
+    # Create a data frame for the line segments
+    lineSegmentMatrix <-
+      data.frame(matrix(data = NA, nrow = numberOfLineSegments, ncol = 2))
+    colnames(lineSegmentMatrix) <- c("start", "end")
+    # If the fixed fixed point is stable
+    if (stableFixedPoint[1] < unstableFixedPoint[1]) {
+      lineSegmentMatrix[1,] <- allFixedPoints[2:1]
+      if (numberOfLineSegments > 1) {
+        lineSegmentMatrix[2,] <- allFixedPoints[2:3]
+        
+      }
+      if (numberOfLineSegments > 2) {
+        lineSegmentMatrix[3,] <- allFixedPoints[4:3]
+      }
+    }
+    # If the fixed fixed point is unstable
+    if (stableFixedPoint[1] > unstableFixedPoint[1]) {
+      lineSegmentMatrix[1,] <- allFixedPoints[1:2]
+      if (numberOfLineSegments > 1) {
+        lineSegmentMatrix[2,] <- allFixedPoints[3:2]
+        
+      }
+      if (numberOfLineSegments > 2) {
+        lineSegmentMatrix[3,] <- allFixedPoints[3:4]
+      }
+    }
     
     # Plot the stationary distribution µ
     GradientDF <-
       data.frame(N = seq(from = 0, to = 1, by = 1 / Z), Gradient = selectionGradient)
-    plot_GradientDF <- ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
+    plot_GradientDF <-
+      ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
       geom_line(size = 2, color = "#3576BD") +
       scale_color_manual(values = c("#3576BD")) +
       ggtitle("Gradient of Selection") +
@@ -397,9 +429,28 @@ shinyServer(function(input, output, session) {
         ),
         axis.title.x =  element_text(margin = margin(t = 15, unit = "pt")),
         axis.title.y =  element_text(margin = margin(r = 15, unit = "pt")),
+        legend.title = element_blank(),
+        legend.position = "top",
+        legend.spacing.x = unit(10, 'pt'),
+        legend.text = element_text(size = 14),
         text = element_text(size = 16)
-      ) + geom_point(
-        # Plot stable fixed points
+      ) +
+      geom_segment( # Plot flow lines
+        data = lineSegmentMatrix / Z,
+        aes(
+          x = start,
+          xend = end,
+          y = 0,
+          yend = 0
+        ),
+        size = 2,
+        color = "black",
+        arrow = arrow(length = unit(.7, "cm")),
+        linejoin = "mitre",
+        lineend = "butt"
+      ) +
+      scale_shape_manual(c("Stable", "Unstable")) +
+      geom_point( # Plot stable fixed points
         data = data.frame(x = stableFixedPoint / Z, y = rep(0, times = length(stableFixedPoint))),
         aes(x, y),
         shape = 21,
@@ -407,8 +458,8 @@ shinyServer(function(input, output, session) {
         fill = "#3576BD",
         size = 5,
         stroke = 2
-      ) + geom_point(
-        # Plot unstable fixed points
+      ) +
+      geom_point( # Plot unstable fixed points
         data = data.frame(x = unstableFixedPoint / Z, y = rep(0, times = length(unstableFixedPoint))),
         aes(x, y),
         shape = 21,
@@ -416,7 +467,7 @@ shinyServer(function(input, output, session) {
         fill = "white",
         size = 5,
         stroke = 2
-      )
+      ) 
     print(plot_GradientDF)
   }) # END PLOT OUTPUT
   
