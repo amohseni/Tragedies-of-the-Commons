@@ -197,7 +197,7 @@ for (i in 1:(Z + 1)) {
 # It follows from being ergodic that the limit distribution π is independent of any initial distribution π(0).
 
 # We compute the stationary distribution of the process
-# First, we calculate µ_0 = ( Σ^{N}_{k=0} Π^{k}_{i=1} PforwardM_{i-1} / PbackM_{i} ) ^ -1
+# First, we calculate µ_0 = ( Σ^{Z}_{k=0} Π^{k}_{i=1} PforwardM_{i-1} / PbackM_{i} ) ^ -1
 Mu0Vector <- c() # Empty vector, in which to store each product
 # Empty matrix, in which to store each element of the products
 Mu0Matrix <- matrix(data = 1,
