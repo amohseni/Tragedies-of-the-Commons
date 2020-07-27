@@ -14,31 +14,38 @@ Z <- 100 # The size of the population
 
 # Define server logic
 shinyServer(function(input, output, session) {
-
   # PROCESS: Compute the desired quantities:
-  # (1) Payoffs, 
+  # (1) Payoffs,
   # (2) Fermi Process Transition Matrix,
   # (3) Stationary Distribution.
   computeDynamics <- reactive({
-    
     # GLOBAL VARIABLES
     # Import the required parameters fro the UI
-    N <- as.numeric(input$groupSize) # The size of groups 
-    r <- as.numeric(input$perceivedRiskOfDisaster) # The risk of disaster occuring in the absence of cooperation succeeding
-    d <- as.numeric(input$perceivedCostOfDisaster) # The cost of disaster (in terms of te proportion of endownments lost) if cooperation fails and disaster occurs
+    N <- as.numeric(input$groupSize) # The size of groups
+    r <-
+      as.numeric(input$perceivedRiskOfDisaster) # The risk of disaster occuring in the absence of cooperation succeeding
+    d <-
+      as.numeric(input$perceivedCostOfDisaster) # The cost of disaster (in terms of te proportion of endownments lost) if cooperation fails and disaster occurs
     b <- 1 # The initial endowment of each individual
-    c <- as.numeric(input$costOfCooperation) # The proportion of the endowment contributed by cooperators
-    p_crit <- as.numeric(input$criticalFraction) # The critical fraction of cooperators at which cooperation succeeds
-    n_crit <- N * p_crit # The critical number of cooperators at which cooperation succeeds
-    R <- as.numeric(input$selection) # The rationlaity coefficient (0:= random selection; 1:= replicator dynamics; ∞ := best reponse dynamics)
-    M <- as.numeric(input$mutation) # Mutation/error/noise parameter (portion of the time a random strategy is chosen)
+    c <-
+      as.numeric(input$costOfCooperation) # The proportion of the endowment contributed by cooperators
+    p_crit <-
+      as.numeric(input$criticalFraction) # The critical fraction of cooperators at which cooperation succeeds
+    n_crit <-
+      N * p_crit # The critical number of cooperators at which cooperation succeeds
+    R <-
+      as.numeric(input$selection) # The rationlaity coefficient (0:= random selection; 1:= replicator dynamics; ∞ := best reponse dynamics)
+    M <-
+      as.numeric(input$mutation) # Mutation/error/noise parameter (portion of the time a random strategy is chosen)
+    correlation <-
+      as.numeric(input$correlation) # Correlation of strategies with themselves (1 := maximally correlated, -1:= maximally anti-correlated)
     
-    # PAYOFF FUNCTIONS    
+    # PAYOFF FUNCTIONS
     # Define the payoffs to each cooperators and defectors
     # as a function of the number of cooperators n_C in their group
     payoff_cooperator <-
       function(n_C) {
-        b * (n_C - n_crit >= 0) + b * (1 - r *d) * (n_C - n_crit < 0) - (c * b)
+        b * (n_C - n_crit >= 0) + b * (1 - r * d) * (n_C - n_crit < 0) - (c * b)
       }
     payoff_defector <-
       function(n_C) {
@@ -50,57 +57,95 @@ shinyServer(function(input, output, session) {
     mean_payoff_cooperator <-
       function(n_C_pop) {
         # Note: If there are no cooperators, just return 0
-        if (n_C_pop == 0) {
-          z <- 0
+        if (n_C_pop == 0 | n_C_pop == Z) {
+          if (n_C_pop == 0) {
+            z <- 0
+          } 
+          if (n_C_pop == Z) {  
+            z <- payoff_cooperator(N)
+          }
         } else {
           # Find the fraction of cooperators in the group
           x <- n_C_pop / Z
           # Compute the vector of (binomially distributed) probabilities for
           # each possible group composed of k cooperators and (N - k) defectors
-          p <- dbinom(x = 0:N, size = N, prob = x)
+          p <- dbinom(x = 0:N,
+                      size = N,
+                      prob = x)
           # Compute the vector of conditional probabilities (k/N) of being a cooperator in each combination
           q <- 0:N / N
+          # Compute the vector of correlation-induced weights for cooperators
+          t <- dbeta(
+            seq(
+              from = 0,
+              to = 1,
+              by = 1 / N
+            ),
+            shape1 = max(1, exp(correlation)),
+            shape2 = max(1, exp(-correlation))
+          )
           # Compute the payoffs to cooperators in each group
           y <- sapply(c(0:N), payoff_cooperator)
           # Find the expected payoff for cooperators across all groups
-          z <- sum(y * q * p) / sum(p * q)
+          z <- sum(y * q * p * t) / sum(p * q * t)
         }
         return(z)
       }
     mean_payoff_defector <-
       function(n_C_pop) {
         # Note: If there are no defectors, just return 0
-        if (n_C_pop == Z) {
-          z <- 0
+        if (n_C_pop == 0 | n_C_pop == Z) {
+          if (n_C_pop == 0) {
+            z <- payoff_defector(0)
+          } 
+          if (n_C_pop == Z) {  
+            z <- 0
+          }
         } else {
           # Find the fraction of cooperators in the group
           x <- n_C_pop / Z
           # Compute the vector of (binomially distributed) probabilities for
           # each possible group composed of k cooperators and (N - k) defectors
-          p <- dbinom(x = 0:N, size = N, prob = x)
+          p <- dbinom(x = 0:N,
+                      size = N,
+                      prob = x)
           # Compute the vector of conditional probabilities ((N-k)/N) of being a defector in each combination
           q <- N:0 / N
+          # Compute the vector of correlation-induced weights for cooperators
+          t <- rev(dbeta(
+            seq(
+              from = 0,
+              to = 1,
+              by = 1 / N
+            ),
+            shape1 = max(1, exp(correlation)),
+            shape2 = max(1, exp(-correlation))
+          ))
           # Compute the payoffs to defectors in each group
           y <- sapply(c(0:N), payoff_defector)
           # Find the expected payoff for defectors across all groups
-          z <- sum(y * q * p) / sum(p * q)
+          z <- sum(y * q * p * t) / sum(p * q * t)
         }
         return(z)
       }
     
     # Create payoff data frame
-    payoff_cooperator_vec <- sapply(seq(from = 0, to = Z, by = 1), mean_payoff_cooperator)
-    payoff_defector_vec <- sapply(seq(from = 0, to = Z, by = 1), mean_payoff_defector)
+    payoff_cooperator_vec <-
+      sapply(seq(from = 0, to = Z, by = 1), mean_payoff_cooperator)
+    payoff_defector_vec <-
+      sapply(seq(from = 0, to = Z, by = 1), mean_payoff_defector)
     PayoffsDF <- data.frame(
       N = rep(seq(
-        from = 0, to = 1, by = 1 / Z
+        from = 0,
+        to = 1,
+        by = 1 / Z
       ), times = 2),
       Payoff = c(payoff_cooperator_vec, payoff_defector_vec),
       Strategy = rep(c("Cooperate", "Defect"), each = Z + 1)
     )
     
     # Specify the transition probabilities of the population changing
-    # from a state with n_C_pop cooperators in the population 
+    # from a state with n_C_pop cooperators in the population
     # to one with n_C_pop + 1, n_C_pop - 1, or n_C_pop cooperators.
     
     # Pr(n_C_pop -> n_C_pop + 1)
@@ -139,17 +184,22 @@ shinyServer(function(input, output, session) {
       nrow = Z + 1,
       ncol = Z + 1,
       byrow = TRUE
-    ) 
+    )
     # Fill the transition matrix
-    for (i in 1:(Z + 1)) { # For each row 
-      for (j in 1:(Z + 1)) {# For each column
-        if (j == (i - 1)) { # If the state has one fewer Cooperator
+    for (i in 1:(Z + 1)) {
+      # For each row
+      for (j in 1:(Z + 1)) {
+        # For each column
+        if (j == (i - 1)) {
+          # If the state has one fewer Cooperator
           FP[i, j] <- Prob_n_C_Decrease(i - 1)
         }
-        if (j == i) { # If the state is the same
+        if (j == i) {
+          # If the state is the same
           FP[i, j] <- Prob_n_C_Stay(i - 1)
         }
-        if (j == (i + 1)) { # If the state has one more Cooperator
+        if (j == (i + 1)) {
+          # If the state has one more Cooperator
           FP[i, j] <- Prob_n_C_Increase(i - 1)
         }
         if ((j != (i - 1)) & (j != i) & (j != (i + 1))) {
@@ -159,7 +209,7 @@ shinyServer(function(input, output, session) {
     }
     
     # SELECTION GADIENT
-    # Now, use the transition matrix to compute the gradient of selection 
+    # Now, use the transition matrix to compute the gradient of selection
     # defined as G(i) = Prob_n_C_Increase(i) - Prob_n_C_Decrease(i).
     Prob_n_C_Increase_vec <- rep(0, times = (Z - 1))
     Prob_n_C_Decrease_vec <- rep(0, times = (Z - 1))
@@ -169,11 +219,13 @@ shinyServer(function(input, output, session) {
     for (i in 2:Z) {
       Prob_n_C_Decrease_vec[i - 1] <- FP[i, i - 1]
     }
-    selectionGradient <- Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
-    selectionGradient <- append(selectionGradient, 0, after = length(selectionGradient))
+    selectionGradient <-
+      Prob_n_C_Increase_vec - Prob_n_C_Decrease_vec
+    selectionGradient <-
+      append(selectionGradient, 0, after = length(selectionGradient))
     selectionGradient <- append(selectionGradient, 0, after = 0)
     
-    # STATIONARY DISTRIBUTION  
+    # STATIONARY DISTRIBUTION
     # Note: We know that the stationary distribution µ exists because the addition of mutation makes the Markov process Ergodic.
     # That is: Where the Fermi Process is already finite, and aperiodic,
     # it is now irreducible (has only one recursive class) as every state is reachable from any other,
@@ -216,33 +268,31 @@ shinyServer(function(input, output, session) {
       MuVector[i] <- Mu0 * prod(MuMatrix[i,])
     }
     
-    # OUTPUT the results of our computations 
+    # OUTPUT the results of our computations
     # to be accessed by other reactive contexts
-    return(
-      list(
-        PayoffsDF,
-        FP,
-        MuVector,
-        selectionGradient
-      )
-    )
+    return(list(PayoffsDF,
+                FP,
+                MuVector,
+                selectionGradient))
     
-  }) # END COMPUTATIONS 
+  }) # END COMPUTATIONS
   
   # OUTPUT: Payoff functions plot
   output$payoffsPlot <- renderPlot({
-    
     # Import relevant variables
     N <- as.numeric(input$groupSize)
     PayoffsDF <- computeDynamics()[[1]]
     
     # Trim {0, 1} endopoints of C & D payoffs (for aesthetics)
-    PayoffsDF[which(PayoffsDF$N == 0 & PayoffsDF$Strategy == "Cooperate"), 2] <- NA
-    PayoffsDF[which(PayoffsDF$N == 1 & PayoffsDF$Strategy == "Defect"), 2] <- NA
+    PayoffsDF[which(PayoffsDF$N == 0 &
+                      PayoffsDF$Strategy == "Cooperate"), 2] <- NA
+    PayoffsDF[which(PayoffsDF$N == 1 &
+                      PayoffsDF$Strategy == "Defect"), 2] <- NA
     
     # Plot payoff functions
-    plot_PayoffsDF <- ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strategy)) +
-      geom_line(aes(color = Strategy), size = 2) + 
+    plot_PayoffsDF <-
+      ggplot(data = PayoffsDF, aes(x = N, y = Payoff, group = Strategy)) +
+      geom_line(aes(color = Strategy), size = 2) +
       scale_color_manual(values = c("#3576BD", "Black")) +
       ggtitle("Average Payoffs of Each Strategy") +
       labs(x = "Fraction of Cooperators", y = "Payoff") +
@@ -254,7 +304,7 @@ shinyServer(function(input, output, session) {
           lineheight = 1.15
         ),
         legend.title = element_blank(),
-        legend.position="bottom",
+        legend.position = "bottom",
         legend.spacing.x = unit(10, 'pt'),
         legend.text = element_text(size = 14),
         axis.title.x =  element_text(margin = margin(t = 15, unit = "pt")),
@@ -267,14 +317,22 @@ shinyServer(function(input, output, session) {
   
   # OUTPUT: Stationary distribution plot
   output$stationaryDistributionPlot <- renderPlot({
-    
     # Import relevant variables
     MuVector <- computeDynamics()[[3]]
+    
+    # The critical fraction of cooperators at which cooperation succeeds
+        successRate <-
+      100 * round(sum(MuVector[ceiling(as.numeric(input$criticalFraction) * Z):(Z + 1)]), digits = 3)
     
     # Plot the stationary distribution
     # Print the stationary distribution µ
     MuDF <-
-      data.frame(N = seq(from = 0, to = 1, by = 1 / Z), Probability = MuVector)
+      data.frame(N = seq(
+        from = 0,
+        to = 1,
+        by = 1 / Z
+      ),
+      Probability = MuVector)
     plot_MuDF <- ggplot(data = MuDF, aes(x = N, y = Probability)) +
       geom_density(
         stat = "identity",
@@ -282,7 +340,7 @@ shinyServer(function(input, output, session) {
         colour = "#3576BD",
         size = 1
       ) +
-      ggtitle("Stationary Distribution") +
+      ggtitle(paste("Stationary Distribution", " (", successRate, "% SR)", sep = "")) +
       labs(x = "Fraction of Cooperators", y = bquote('Probability')) +
       theme_minimal() +
       theme(
@@ -296,12 +354,10 @@ shinyServer(function(input, output, session) {
         text = element_text(size = 16)
       ) +
       geom_vline(
-        aes(
-        colour = "Critical Threshold"
-        ),
+        aes(colour = "Critical Threshold"),
         xintercept = as.numeric(input$criticalFraction),
         colour = "Black",
-        linetype="dotted",
+        linetype = "dotted",
         size = 2
       )
     print(plot_MuDF)
@@ -309,7 +365,6 @@ shinyServer(function(input, output, session) {
   
   # OUTPUT: Selection gradient plot
   output$selectionGradientPlot <- renderPlot({
-    
     # Import relevant variables
     selectionGradient <- computeDynamics()[[4]]
     
@@ -332,7 +387,9 @@ shinyServer(function(input, output, session) {
       if (selectionGradientSign[i] == FALSE &
           selectionGradientSign[i + 1] == TRUE) {
         unstableFixedPoint <-
-          append(unstableFixedPoint, i - 0.5, after = length(unstableFixedPoint))
+          append(unstableFixedPoint,
+                 i - 0.5,
+                 after = length(unstableFixedPoint))
       }
     }
     # Determine the exterior (stable & unstable) fixed points using the selection gradient
@@ -349,7 +406,7 @@ shinyServer(function(input, output, session) {
       stableFixedPoint <- 0
       unstableFixedPoint <- Z
     }
-    # If neither strategy dominates the other, 
+    # If neither strategy dominates the other,
     # then we find whether the first and last inteior fixed point are stable or unstable,
     # and deduce that their correponding exterior fixed point must exhibit the opposite stability.
     if (!all(selectionGradient >= 0) &
@@ -386,7 +443,11 @@ shinyServer(function(input, output, session) {
     numberOfLineSegments <- length(allFixedPoints) - 1
     # Create a data frame for the line segments
     lineSegmentMatrix <-
-      data.frame(matrix(data = NA, nrow = numberOfLineSegments, ncol = 2))
+      data.frame(matrix(
+        data = NA,
+        nrow = numberOfLineSegments,
+        ncol = 2
+      ))
     colnames(lineSegmentMatrix) <- c("start", "end")
     # If the fixed fixed point is stable
     if (stableFixedPoint[1] < unstableFixedPoint[1]) {
@@ -413,7 +474,11 @@ shinyServer(function(input, output, session) {
     
     # Plot the stationary distribution µ
     GradientDF <-
-      data.frame(N = seq(from = 0, to = 1, by = 1 / Z), Gradient = selectionGradient)
+      data.frame(N = seq(
+        from = 0,
+        to = 1,
+        by = 1 / Z
+      ), Gradient = selectionGradient)
     plot_GradientDF <-
       ggplot(data = GradientDF, aes(x = N, y = Gradient)) +
       geom_line(size = 2, color = "#3576BD") +
@@ -435,7 +500,8 @@ shinyServer(function(input, output, session) {
         legend.text = element_text(size = 14),
         text = element_text(size = 16)
       ) +
-      geom_segment( # Plot flow lines
+      geom_segment(
+        # Plot flow lines
         data = lineSegmentMatrix / Z,
         aes(
           x = start,
@@ -450,8 +516,11 @@ shinyServer(function(input, output, session) {
         lineend = "butt"
       ) +
       scale_shape_manual(c("Stable", "Unstable")) +
-      geom_point( # Plot stable fixed points
-        data = data.frame(x = stableFixedPoint / Z, y = rep(0, times = length(stableFixedPoint))),
+      geom_point(
+        # Plot stable fixed points
+        data = data.frame(x = stableFixedPoint / Z, y = rep(0, times = length(
+          stableFixedPoint
+        ))),
         aes(x, y),
         shape = 21,
         colour = "#3576BD",
@@ -459,15 +528,18 @@ shinyServer(function(input, output, session) {
         size = 5,
         stroke = 2
       ) +
-      geom_point( # Plot unstable fixed points
-        data = data.frame(x = unstableFixedPoint / Z, y = rep(0, times = length(unstableFixedPoint))),
+      geom_point(
+        # Plot unstable fixed points
+        data = data.frame(x = unstableFixedPoint / Z, y = rep(0, times = length(
+          unstableFixedPoint
+        ))),
         aes(x, y),
         shape = 21,
         colour = "#3576BD",
         fill = "white",
         size = 5,
         stroke = 2
-      ) 
+      )
     print(plot_GradientDF)
   }) # END PLOT OUTPUT
   

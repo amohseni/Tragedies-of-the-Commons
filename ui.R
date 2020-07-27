@@ -53,6 +53,16 @@ shinyUI(fluidPage(
       # Use MathJax
       withMathJax(),
       
+      # Correlation
+      sliderInput(
+        "correlation",
+        "Correlation (\\(\\rho\\)):",
+        min = -1,
+        max = 1,
+        value = 0,
+        step = 0.1
+      ),
+      
       # Group size
       sliderInput(
         "groupSize",
